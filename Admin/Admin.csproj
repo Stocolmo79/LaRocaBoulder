@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Classes\Client.cs" />
     <Compile Include="Classes\ComboBoX.cs" />
     <Compile Include="Classes\User.cs" />
     <Compile Include="frmAdmin.cs">

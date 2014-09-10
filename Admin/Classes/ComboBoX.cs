@@ -9,13 +9,13 @@ namespace Admin.Classes
     class ComboBoX
     {
         private readonly string text;
-        private readonly string value;
+        private readonly int value;
 
         public string Text
         {
             get { return text; }
         }
-        public string Value
+        public int Value
         {
             get
             {
@@ -23,7 +23,7 @@ namespace Admin.Classes
             }
         }
 
-        public ComboBoX(string text, string value)
+        public ComboBoX(string text, int value)
         {
             this.text = text;
             this.value = value;

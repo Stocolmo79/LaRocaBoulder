@@ -8,6 +8,7 @@ namespace Admin.Classes
 {
     public class User
     {
+     
         public int ID { get; set; }
         public string firstName { get; set; }
         public string lastName { get; set; }
@@ -16,6 +17,7 @@ namespace Admin.Classes
         public string phone { get; set; }
         public string password { get; set; }
         public string employeenumber { get; set; }
-        
+        public int InstructorID { get; set; }
+        public string RUT { get; set; }
     }
 }

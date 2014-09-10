@@ -16,6 +16,7 @@ namespace Admin
     {
         public User User;
         public User ToUpdateUser = new User();
+        public Client Client = new Client();
         private bool exists;
 
         private readonly string _connectionString = "";
@@ -31,7 +32,14 @@ namespace Admin
             LoadcmbInstructors();
             LoadExistingEmployees();
             LoggedIn();
+            SetMonthlyDate();
 
+        }
+
+        private void SetMonthlyDate()
+        {
+            txtMonthlyStart.Text = DateTime.Today.ToShortDateString();
+            txtMonthlyEnd.Text = DateTime.Today.AddMonths(1).ToShortDateString();
         }
 
         private void LoggedIn()
@@ -54,11 +62,11 @@ namespace Admin
                 SqlCommand command;
                 if (!exists)
                 {
-                    command = new SqlCommand("INSERT INTO tblEmployee VALUES (@FirstName,@LastName,@NickName,@Employeenumber,@Password,@Phone,@Admin)", connection);
+                    command = new SqlCommand("INSERT INTO tblEmployee VALUES (@FirstName,@LastName,@NickName,@Employeenumber,@Password,@Phone,@Admin,@InstructorID,@RUT)", connection);
                 }
                 else
                 {
-                    command = new SqlCommand("UPDATE tblEmployee SET FirstName = @FirstName, LastName =@LastName,NickName = @NickName, Password =@Password,Phone =@Phone,Admin =@Admin WHERE ID =@ID ", connection);
+                    command = new SqlCommand("UPDATE tblEmployee SET FirstName = @FirstName, LastName =@LastName,NickName = @NickName, Password = @Password, Phone = @Phone, Admin = @Admin, InstructorID = @InstructorID, RUT = @RUT WHERE ID =@ID ", connection);
                     command.Parameters.AddWithValue("@ID", ToUpdateUser.ID);
                 }
 
@@ -69,6 +77,8 @@ namespace Admin
                 command.Parameters.AddWithValue("@Password", ToUpdateUser.password);
                 command.Parameters.AddWithValue("@Phone", ToUpdateUser.phone);
                 command.Parameters.AddWithValue("@Admin", ToUpdateUser.admin);
+                command.Parameters.AddWithValue("@InstructorID",  ToUpdateUser.InstructorID);
+                command.Parameters.AddWithValue("@RUT", ToUpdateUser.RUT);
                 command.ExecuteNonQuery();
 
                 ResetForm();
@@ -102,15 +112,17 @@ namespace Admin
 
         private void tcAdmin_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (tcAdmin.SelectedIndex == 2)
+            if (tcAdmin.SelectedIndex ==1)
             {
                 btnSave.Enabled = User.admin;
-                if (!User.admin)
-                {
-                    txtPassword.Visible = false;
-                }
+        
                 txtEmpNumber.Enabled = !exists;
+                txtPassword.UseSystemPasswordChar = !User.admin;
 
+            }
+            else
+            {
+                Client = new Client();
             }
         }
 
@@ -218,16 +230,16 @@ namespace Admin
                 var command = new SqlCommand("SELECT * FROM tblEmployee", connection);
 
                 var rd = command.ExecuteReader();
-                var datasource = new List<ComboBoX> {new ComboBoX("Nuevo Usuario", "0")};
+                var datasource = new List<ComboBoX> {new ComboBoX("Nuevo Usuario", 0)};
                 while (rd.Read())
                 {
-                    datasource.Add(new ComboBoX(rd["NickName"].ToString(), rd["ID"].ToString()));
+                    datasource.Add(new ComboBoX(rd["NickName"].ToString(), (int) rd["ID"]));
                 }
 
-                cmbUsuario.DataSource = datasource;
-                cmbUsuario.DisplayMember = "Text";
-                cmbUsuario.ValueMember = "Value";
-                cmbUsuario.DropDownStyle = ComboBoxStyle.DropDownList;
+                cmbUser.DataSource = datasource;
+                cmbUser.DisplayMember = "Text";
+                cmbUser.ValueMember = "Value";
+                cmbUser.DropDownStyle = ComboBoxStyle.DropDownList;
                 rd.Close();
                 connection.Close();
                 connection.Dispose();
@@ -246,7 +258,7 @@ namespace Admin
                 var datasource = new List<ComboBoX>();
                 while (rd.Read())
                 {
-                    datasource.Add(new ComboBoX(rd["InstructorType"].ToString(), rd["ID"].ToString()));
+                    datasource.Add(new ComboBoX(rd["InstructorType"].ToString(), (int) rd["ID"]));
                 }
 
                 cmbInstructor.DataSource = datasource;
@@ -260,34 +272,127 @@ namespace Admin
             }
         }
 
-        private void LoadAllNicks()
+
+        private void cmbUsuario_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            SearchUser((ComboBoX) cmbUser.SelectedItem);
+        }
+
+        private void cmbInstructor_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            ToUpdateUser.InstructorID = ((ComboBoX) cmbInstructor.SelectedItem).Value;
+        }
+
+        private void txtSearchClient_Click(object sender, EventArgs e)
+        {
+            SearchClient();
+            cmbClientsFound.Visible =  cmbClientsFound.Items.Count > 1;
+            lblNotFound.Visible = cmbClientsFound.Items.Count == 0;
+
+        }
+
+        private void SearchClient()
         {
             using (var connection = new SqlConnection(_connectionString))
             {
                 connection.Open();
-                var command = new SqlCommand("SELECT NickName FROM tblEmployee", connection);
-
+                var command = new SqlCommand("SELECT * FROM tblClient WHERE FirstName = @param  OR LastName =@param OR Phone = @param OR email = @param", connection);
+                command.Parameters.AddWithValue("@param", txtSearchBox.Text);
                 var rd = command.ExecuteReader();
 
-                var source = new AutoCompleteStringCollection();
-               
+                var datasource = new List<ComboBoX>() ;
                 while (rd.Read())
                 {
-                    source.Add(rd[0].ToString());
+                    datasource.Add(new ComboBoX(rd["FirstName"] + " " + rd["LastName"] +" "+ rd["Email"], (int)rd["ID"]));
                 }
-                
+                cmbClientsFound.DataSource = datasource;
+                cmbClientsFound.DisplayMember = "Text";
+                cmbClientsFound.ValueMember = "Value";
+                cmbClientsFound.DropDownStyle = ComboBoxStyle.DropDownList;
+
+
                 rd.Close();
                 connection.Close();
                 connection.Dispose();
-                txtNick.AutoCompleteCustomSource = source;
-                txtNick.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
-                txtNick.AutoCompleteSource = AutoCompleteSource.CustomSource;
+
             }
         }
 
-        private void cmbUsuario_SelectedIndexChanged(object sender, EventArgs e)
+        private void btnSaveClient_Click(object sender, EventArgs e)
         {
-            SearchUser((ComboBoX) cmbUsuario.SelectedItem);
+            
+
+            using (var connection = new SqlConnection(_connectionString))
+            {
+                connection.Open();
+                SqlCommand command;
+                if (!exists)
+                {
+                    command = new SqlCommand("INSERT INTO tblClient VALUES (@FirstName,@LastName,@Phone,@email) DECLARE @ID INT; SET @ID=SCOPE_IDENTITY() ", connection);
+                }
+                else
+                {
+                    command = new SqlCommand("UPDATE tblEmployee SET FirstName = @FirstName, LastName =@LastName,Phone = @Phone, Email = @email WHERE ID =@ID  ", connection);
+                    command.Parameters.AddWithValue("@ID", ToUpdateUser.ID);
+                }
+
+                command.Parameters.AddWithValue("@FirstName", Client.firstName);
+                command.Parameters.AddWithValue("@LastName", Client.lastName);
+                command.Parameters.AddWithValue("@Phone", Client.phone);
+                command.Parameters.AddWithValue("@email", Client.email);
+     
+              int i = (int) command.ExecuteScalar();
+
+                ResetForm();
+                connection.Close();
+                connection.Dispose();
+            }
+        }
+
+        private void txtFirstNameClient_Leave(object sender, EventArgs e)
+        {
+            if (txtFirstNameClient.Text.Length<1)
+            {
+                txtFirstNameClient.Text = Client.firstName;
+            }
+            else
+            {
+                  Client.firstName = txtFirstNameClient.Text;
+            }
+          
+        }
+
+        private void txtLastNameClient_Leave(object sender, EventArgs e)
+        {
+            if (txtLastNameClient.Text.Length < 1)
+            {
+                txtLastNameClient.Text = Client.lastName;
+            }
+            else
+            {
+                Client.lastName = txtLastNameClient.Text;
+                
+            }
+           
+        }
+
+        private void txtPhoneClient_Leave(object sender, EventArgs e)
+        {
+            Client.phone = txtPhoneClient.Text;
+        }
+
+        private void txtEmailClient_Leave(object sender, EventArgs e)
+        {
+            if (txtEmailClient.Text.Length < 1)
+            {
+                txtEmailClient.Text = Client.email;
+            }
+            else
+            {
+
+                Client.email = txtEmailClient.Text;
+            }
+
         }
     }
 }
